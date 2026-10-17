@@ -1,1 +1,17 @@
 *.cfl997
+
+# Keil 自动生成的中间文件
+Objects/
+Listings/
+DebugConfig/
+
+# Keil 的窗口布局文件（每个人电脑不一样）
+*.uvguix.*
+*.uvgui.*
+
+# 编译生成的最终烧录文件
+*.hex
+*.bin
+*.axf
+*.map
+*.lst
