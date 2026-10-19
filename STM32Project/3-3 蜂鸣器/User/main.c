@@ -35,5 +35,6 @@ int main(void)
         GPIO_Write(GPIOA, ~0x0020); Delay_ms(100);
         GPIO_Write(GPIOA, ~0x0040); Delay_ms(100);
         GPIO_Write(GPIOA, ~0x0080); Delay_ms(100);
+				GPIO_Write(GPIOA, ~0x0800); Delay_ms(100);
     }
 }
