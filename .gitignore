@@ -15,3 +15,5 @@ DebugConfig/
 *.axf
 *.map
 *.lst
+
+*.bat
