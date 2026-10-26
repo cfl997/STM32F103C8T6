@@ -109,7 +109,8 @@ void MPU6050_GetData(int16_t *AccX, int16_t *AccY, int16_t *AccZ,
     *AccY  = (int16_t)((buf[2]  << 8) | buf[3]);
     *AccZ  = (int16_t)((buf[4]  << 8) | buf[5]);
     // buf[6]~buf[7] 是温度，这里跳过
-    *GyroX = (int16_t)((buf[6]  << 8) | buf[7]);  //我这个角速度是有问题的。所以显示温度吧 应该是8 9
+    //*GyroX = (int16_t)((buf[6]  << 8) | buf[7])/ 340.0f + 36.53f;;  //我这个角速度是有问题的。所以显示温度吧 应该是8 9
+		*GyroX = (int16_t)((buf[6]  << 8) | buf[7])/ 333.87f + 21.f;;  //我这个角速度是有问题的。所以显示温度吧 应该是8 9
     *GyroY = (int16_t)((buf[10] << 8) | buf[11]);
     *GyroZ = (int16_t)((buf[12] << 8) | buf[13]);
 }
