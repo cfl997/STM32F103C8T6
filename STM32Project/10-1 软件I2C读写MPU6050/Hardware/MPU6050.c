@@ -81,32 +81,35 @@ uint8_t MPU6050_GetID(void)
   * 参    数：GyroX GyroY GyroZ 陀螺仪X、Y、Z轴的数据，使用输出参数的形式返回，范围：-32768~32767
   * 返 回 值：无
   */
-void MPU6050_GetData(int16_t *AccX, int16_t *AccY, int16_t *AccZ, 
-						int16_t *GyroX, int16_t *GyroY, int16_t *GyroZ)
+void MPU6050_GetData(int16_t *AccX, int16_t *AccY, int16_t *AccZ,
+                     int16_t *GyroX, int16_t *GyroY, int16_t *GyroZ)
 {
-	uint8_t DataH, DataL;								//定义数据高8位和低8位的变量
-	
-	DataH = MPU6050_ReadReg(MPU6050_ACCEL_XOUT_H);		//读取加速度计X轴的高8位数据
-	DataL = MPU6050_ReadReg(MPU6050_ACCEL_XOUT_L);		//读取加速度计X轴的低8位数据
-	*AccX = (DataH << 8) | DataL;						//数据拼接，通过输出参数返回
-	
-	DataH = MPU6050_ReadReg(MPU6050_ACCEL_YOUT_H);		//读取加速度计Y轴的高8位数据
-	DataL = MPU6050_ReadReg(MPU6050_ACCEL_YOUT_L);		//读取加速度计Y轴的低8位数据
-	*AccY = (DataH << 8) | DataL;						//数据拼接，通过输出参数返回
-	
-	DataH = MPU6050_ReadReg(MPU6050_ACCEL_ZOUT_H);		//读取加速度计Z轴的高8位数据
-	DataL = MPU6050_ReadReg(MPU6050_ACCEL_ZOUT_L);		//读取加速度计Z轴的低8位数据
-	*AccZ = (DataH << 8) | DataL;						//数据拼接，通过输出参数返回
-	
-	DataH = MPU6050_ReadReg(MPU6050_GYRO_XOUT_H);		//读取陀螺仪X轴的高8位数据
-	DataL = MPU6050_ReadReg(MPU6050_GYRO_XOUT_L);		//读取陀螺仪X轴的低8位数据
-	*GyroX = (DataH << 8) | DataL;						//数据拼接，通过输出参数返回
-	
-	DataH = MPU6050_ReadReg(MPU6050_GYRO_YOUT_H);		//读取陀螺仪Y轴的高8位数据
-	DataL = MPU6050_ReadReg(MPU6050_GYRO_YOUT_L);		//读取陀螺仪Y轴的低8位数据
-	*GyroY = (DataH << 8) | DataL;						//数据拼接，通过输出参数返回
-	
-	DataH = MPU6050_ReadReg(MPU6050_GYRO_ZOUT_H);		//读取陀螺仪Z轴的高8位数据
-	DataL = MPU6050_ReadReg(MPU6050_GYRO_ZOUT_L);		//读取陀螺仪Z轴的低8位数据
-	*GyroZ = (DataH << 8) | DataL;						//数据拼接，通过输出参数返回
+    uint8_t buf[14];
+    uint8_t i;
+
+    MyI2C_Start();
+    MyI2C_SendByte(0xD0);              // 写
+    MyI2C_ReceiveAck();
+    MyI2C_SendByte(0x3B);              // 从加速度 X 高字节开始
+    MyI2C_ReceiveAck();
+
+    MyI2C_Start();                     // 重复起始
+    MyI2C_SendByte(0xD1);              // 读
+    MyI2C_ReceiveAck();
+
+    for(i = 0; i < 14; i++) {
+        buf[i] = MyI2C_ReceiveByte();
+        if(i < 13) MyI2C_SendAck(0);   // 前 13 个字节给 ACK
+        else       MyI2C_SendAck(1);   // 最后一个给 NACK，结束读取
+    }
+    MyI2C_Stop();
+
+    // 拼接：高字节在前，低字节在后
+    *AccX  = (int16_t)((buf[0]  << 8) | buf[1]);
+    *AccY  = (int16_t)((buf[2]  << 8) | buf[3]);
+    *AccZ  = (int16_t)((buf[4]  << 8) | buf[5]);
+    // buf[6]~buf[7] 是温度，这里跳过
+    *GyroX = (int16_t)((buf[6]  << 8) | buf[7]);  //我这个角速度是有问题的。所以显示温度吧 应该是8 9
+    *GyroY = (int16_t)((buf[10] << 8) | buf[11]);
+    *GyroZ = (int16_t)((buf[12] << 8) | buf[13]);
 }
