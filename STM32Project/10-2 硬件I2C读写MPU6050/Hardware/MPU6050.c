@@ -81,6 +81,90 @@ uint8_t MPU6050_ReadReg(uint8_t RegAddress)
 	return Data;
 }
 
+
+/**
+  * 函    数：MPU6050写多个寄存器（连续地址）
+  * 参    数：RegAddress 起始寄存器地址
+  * 参    数：pData 待写数据缓冲区
+  * 参    数：Len 数据长度
+  * 返 回 值：无
+  */
+void MPU6050_WriteRegs(uint8_t RegAddress, uint8_t *pData, uint8_t Len)
+{
+	uint8_t i;
+	
+	I2C_GenerateSTART(I2C2, ENABLE);
+	MPU6050_WaitEvent(I2C2, I2C_EVENT_MASTER_MODE_SELECT);					// EV5
+	
+	I2C_Send7bitAddress(I2C2, MPU6050_ADDRESS, I2C_Direction_Transmitter);
+	MPU6050_WaitEvent(I2C2, I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED);	// EV6
+	
+	I2C_SendData(I2C2, RegAddress);											// 起始寄存器地址
+	MPU6050_WaitEvent(I2C2, I2C_EVENT_MASTER_BYTE_TRANSMITTING);			// EV8
+	
+	for (i = 0; i < Len; i++)
+	{
+		I2C_SendData(I2C2, pData[i]);
+		
+		if (i < Len - 1)
+		{
+			// 非最后一个字节：等待 EV8（数据寄存器空，可以继续写）
+			MPU6050_WaitEvent(I2C2, I2C_EVENT_MASTER_BYTE_TRANSMITTING);
+		}
+		else
+		{
+			// 最后一个字节：等待 EV8_2（数据真正发送完成、可以产生 STOP）
+			MPU6050_WaitEvent(I2C2, I2C_EVENT_MASTER_BYTE_TRANSMITTED);
+		}
+	}
+	
+	I2C_GenerateSTOP(I2C2, ENABLE);
+}
+
+/**
+  * 函    数：MPU6050读多个寄存器（连续地址）
+  * 参    数：RegAddress 起始寄存器地址
+  * 参    数：pData 读取数据缓冲区
+  * 参    数：Len 数据长度（至少为1）
+  * 返 回 值：无
+  */
+void MPU6050_ReadRegs(uint8_t RegAddress, uint8_t *pData, uint8_t Len)
+{
+	uint8_t i;
+	
+	/* ===== 阶段1：写寄存器地址 ===== */
+	I2C_GenerateSTART(I2C2, ENABLE);
+	MPU6050_WaitEvent(I2C2, I2C_EVENT_MASTER_MODE_SELECT);					// EV5
+	
+	I2C_Send7bitAddress(I2C2, MPU6050_ADDRESS, I2C_Direction_Transmitter);
+	MPU6050_WaitEvent(I2C2, I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED);	// EV6
+	
+	I2C_SendData(I2C2, RegAddress);
+	MPU6050_WaitEvent(I2C2, I2C_EVENT_MASTER_BYTE_TRANSMITTED);				// EV8_2（写阶段结束）
+	
+	/* ===== 阶段2：重复起始 + 读 ===== */
+	I2C_GenerateSTART(I2C2, ENABLE);
+	MPU6050_WaitEvent(I2C2, I2C_EVENT_MASTER_MODE_SELECT);					// EV5
+	
+	I2C_Send7bitAddress(I2C2, MPU6050_ADDRESS, I2C_Direction_Receiver);
+	MPU6050_WaitEvent(I2C2, I2C_EVENT_MASTER_RECEIVER_MODE_SELECTED);		// EV6
+	
+	for (i = 0; i < Len; i++)
+	{
+		if (i == Len - 1)
+		{
+			// 最后一个字节之前：提前失能 ACK 并申请 STOP
+			I2C_AcknowledgeConfig(I2C2, DISABLE);
+			I2C_GenerateSTOP(I2C2, ENABLE);
+		}
+		
+		MPU6050_WaitEvent(I2C2, I2C_EVENT_MASTER_BYTE_RECEIVED);			// EV7
+		pData[i] = I2C_ReceiveData(I2C2);
+	}
+	
+	I2C_AcknowledgeConfig(I2C2, ENABLE);	// 恢复 ACK，避免影响后续操作
+}
+
 /**
   * 函    数：MPU6050初始化
   * 参    数：无
